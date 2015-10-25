@@ -372,7 +372,7 @@ public extension Future {
     class A: SomeProtocol {
       // Protocol conforming requires this
       var future: Future<Void> {
-        return Future<User.incoming { future
+        return Future<User>.incoming { future
           let user = ...
           future.resolve(user)
         }.then { user
@@ -399,7 +399,7 @@ public extension Future {
     class A: SomeProtocol {
       // Protocol conforming requires this
       var future: Future<AnyObject> {
-        return Future<User.incoming { future
+        return Future<User>.incoming { future
           let user = ...
           future.resolve(user)
         }.then { user
