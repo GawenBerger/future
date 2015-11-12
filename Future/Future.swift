@@ -420,7 +420,9 @@ public extension Future {
   ```
   */
   public func wrapped<C>(_: C.Type) -> Future<C> {
-    return then { object -> C in object as! C }
+    /// TODO: Check error when using as! instead of `unsafeBitCast`
+    /// Why do we need `unsafeBitCast` ?
+    return then { object -> C in unsafeBitCast(object, C.self) }
   }
 
 }
