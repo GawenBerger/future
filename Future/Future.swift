@@ -348,13 +348,19 @@ public extension Future {
     Returns: future object
   */
   public static func all<A>(futures: [Future<A>]) -> Future<[A]> {
-    return Future<[A]>.incoming { wrappingFuture in
-      if let future = futures.filter({ $0.state == .Pending }).first {
-        future
-          .then { _ -> Future<[A]> in self.all(futures) }
-          .fail(future.reject)
-      } else {
-        wrappingFuture.resolve(futures.map { $0.value })
+    return Future<[A]>.incoming { rootFuture in
+      guard !futures.isEmpty else {
+        return rootFuture.resolve([])
+      }
+      
+      var objects: [A] = []
+      for future in futures {
+        future.then { object in
+          objects.append(object)
+          if objects.count == futures.count {
+            rootFuture.resolve(objects)
+          }
+        }.fail(rootFuture.reject)
       }
     }
   }
