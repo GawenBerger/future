@@ -46,7 +46,7 @@ public class Future<A> {
   ///
   /// Important: When resolved, the future will discard `fail` chain fonctions.
   /// When rejected, the future will discard `then` chain fonctions
-  private var chain: (then: [Void -> Void], fail: [Void -> Void]) = ([], [])
+  private var chain: (then: [A -> Void], fail: [NSError? -> Void]) = ([], [])
 
   /**
     Designated static initializer for async futures.
@@ -104,7 +104,7 @@ public extension Future {
     Important: `f` is garanteed to be executed on main queue
   */
   public func then(f: A -> Void) -> Future<A> {
-    appendThen { f(self.value) }
+    appendThen { value in f(value) }
     return self
   }
   
@@ -122,12 +122,12 @@ public extension Future {
   public func then<B>(f: A -> B) -> Future<B> {
     let future = Future<B>()
     
-    appendThen {
-      future.resolve(f(self.value))
+    appendThen { value in
+      future.resolve(f(value))
     }
     
-    appendFail {
-      future.reject(self.error)
+    appendFail { error in
+      future.reject(error)
     }
     
     return future
@@ -146,14 +146,14 @@ public extension Future {
   public func then<B>(f: A -> Future<B>) -> Future<B> {
     let future = Future<B>()
     
-    appendThen {
-      f(self.value)
+    appendThen { value in
+      f(value)
         .then(future.resolve)
         .fail(future.reject)
     }
     
-    appendFail {
-      future.reject(self.error)
+    appendFail { error in
+      future.reject(error)
     }
     
     return future
@@ -169,7 +169,7 @@ public extension Future {
     Important: `f` is garanteed to be executed on main queue
   */
   public func fail(f: NSError? -> Void) -> Future<A> {
-    appendFail { f(self.error) }
+    appendFail { error in f(error) }
     return self
   }
   
@@ -181,7 +181,7 @@ public extension Future {
     that can pop when multiple threads access the
     same future instance
   */
-  private func appendThen(f: Void -> Void) {
+  private func appendThen(f: A -> Void) {
     // Avoid concurrent access, synchronise threads
     objc_sync_enter(self)
     
@@ -204,7 +204,7 @@ public extension Future {
     that can pop when multiple threads access the
     same future instance
   */
-  private func appendFail(f: Void -> Void) {
+  private func appendFail(f: NSError? -> Void) {
     // Avoid concurrent access, synchronise threads
     objc_sync_enter(self)
     
@@ -311,7 +311,9 @@ public extension Future {
   */
   private func resolveAll() {
     for f in self.chain.then {
-      dispatch_async(dispatch_get_main_queue(), f)
+      dispatch_async(dispatch_get_main_queue()) {
+        f(self.value)
+      }
     }
     
     self.chain.then = []
@@ -323,7 +325,9 @@ public extension Future {
   */
   private func rejectAll() {
     for f in self.chain.fail {
-      dispatch_async(dispatch_get_main_queue(), f)
+      dispatch_async(dispatch_get_main_queue()) {
+        f(self.error)
+      }
     }
     
     self.chain.fail = []
