@@ -75,7 +75,7 @@ public class Future<A> {
     Returns: The future
   */
   public static func resolve<A>(value: A) -> Future<A> {
-    return Future<A>.incoming { $0.resolve(value) }
+    return Future<A>.incoming { try! $0.resolve(value) }
   }
   
   /**
@@ -88,7 +88,7 @@ public class Future<A> {
     Returns: The future
   */
   public static func fail<A>(error: NSError?) -> Future<A> {
-    return Future<A>.incoming { $0.reject(error) }
+    return Future<A>.incoming { try! $0.reject(error) }
   }
 }
 
@@ -123,11 +123,11 @@ public extension Future {
     let future = Future<B>()
     
     appendThen { value in
-      future.resolve(f(value))
+      try! future.resolve(f(value))
     }
     
     appendFail { error in
-      future.reject(error)
+      try! future.reject(error)
     }
     
     return future
@@ -148,12 +148,12 @@ public extension Future {
     
     appendThen { value in
       f(value)
-        .then(future.resolve)
-        .fail(future.reject)
+        .then { value in try! future.resolve(value) }
+        .fail { error in try! future.reject(error) }
     }
     
     appendFail { error in
-      future.reject(error)
+      try! future.reject(error)
     }
     
     return future
@@ -233,21 +233,19 @@ public extension Future {
     that can pop when multiple threads access the
     same future instance
   */
-  public func resolve(value: A) {
+  public func resolve(value: A) throws {
     // Avoid concurrent access, synchronise threads
     objc_sync_enter(self)
     
     // Throw if trying to resolve/reject promise that has already
     // been resolved/rejected
     if state != .Pending {
-      /// TODO: Handle error properly
-      return
-//      throw NSError(
-//        domain: "com.future",
-//        code: 1,
-//        userInfo: [
-//          NSLocalizedDescriptionKey: "Promise has already been resolved/rejected. identifier: \(self.identifier)"
-//        ])
+      throw NSError(
+        domain: "com.future",
+        code: 1,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Promise has already been resolved/rejected. identifier: \(self.identifier)"
+        ])
     }
 
     // Store given value
@@ -274,22 +272,19 @@ public extension Future {
     that can pop when multiple threads access the
     same future instance
   */
-  public func reject(error: NSError? = nil) {
+  public func reject(error: NSError? = nil) throws {
     // Avoid concurrent access, synchronise threads
     objc_sync_enter(self)
 
     // Throw if trying to resolve/reject promise that has already
     // been resolved/rejected
     if state != .Pending {
-      /// TODO: Handle error properly
-      return
-      
-//      throw NSError(
-//        domain: NSInternalInconsistencyException,
-//        code: 1,
-//        userInfo: [
-//          NSLocalizedDescriptionKey: "Promise has already been resolved/rejected. identifier: \(self.identifier)"
-//        ])
+      throw NSError(
+        domain: NSInternalInconsistencyException,
+        code: 1,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Promise has already been resolved/rejected. identifier: \(self.identifier)"
+        ])
     }
     
     // Store given error
@@ -350,7 +345,7 @@ public extension Future {
   public static func all<A>(futures: [Future<A>]) -> Future<[A]> {
     return Future<[A]>.incoming { rootFuture in
       guard !futures.isEmpty else {
-        return rootFuture.resolve([])
+        return try! rootFuture.resolve([])
       }
       
       var objects: [A] = []
@@ -358,9 +353,11 @@ public extension Future {
         future.then { object in
           objects.append(object)
           if objects.count == futures.count {
-            rootFuture.resolve(objects)
+            try! rootFuture.resolve(objects)
           }
-        }.fail(rootFuture.reject)
+        }.fail { error in
+          try! rootFuture.reject(error)
+        }
       }
     }
   }
