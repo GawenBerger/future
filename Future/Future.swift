@@ -53,9 +53,10 @@ public class Future<A> {
     The method executes the block asynchronously in background queue
     (Future.futureQueueConcurrent)
   
-    Parameter: f: The block to execute with the future as parameter.
+    - parameters:
+      - f is the block to execute with the future as parameter.
   
-    Returns: The created future object
+    - returns: The created future object
   */
   public static func incoming(f: Future<A> -> Void) -> Future<A> {
     let future = Future<A>()
@@ -70,9 +71,10 @@ public class Future<A> {
     return a future of a value that has already been fetched or
     computed
   
-    Parameter value: The value to resolve
+    - parameters:
+      - value is the value to resolve
   
-    Returns: The future
+    - returns: The future
   */
   public static func resolve<A>(value: A) -> Future<A> {
     return Future<A>.incoming { try! $0.resolve(value) }
@@ -97,11 +99,12 @@ public extension Future {
   /**
     Add a fonction to fonction `then` chain.
   
-    Parameter f: The fonction to execute
-  
-    Returns: self
-  
     Important: `f` is garanteed to be executed on main queue
+
+    - parameters:
+      - f is the fonction to execute
+
+    - returns: self
   */
   public func then(f: A -> Void) -> Future<A> {
     appendThen { value in f(value) }
@@ -113,11 +116,12 @@ public extension Future {
     a new type `B`. A new future of type B is created and
     returned as the result of this fonction
   
-    Parameter f: The fonction to execute
-  
-    Returns: the future
-  
     Important: `f` is garanteed to be executed on main queue
+
+    - parameters:
+      - f is the fonction to execute
+
+    - returns: the future
   */
   public func then<B>(f: A -> B) -> Future<B> {
     let future = Future<B>()
@@ -137,11 +141,12 @@ public extension Future {
     Add a fonction to fonction `then` chain. This fonction returns
     a new Future of type `B`.
   
-    Parameter f: The fonction to execute
-  
-    Returns: the future
-  
     Important: `f` is garanteed to be executed on main queue
+
+    - parameters:
+      - f is the fonction to execute
+
+    - returns: the future
   */
   public func then<B>(f: A -> Future<B>) -> Future<B> {
     let future = Future<B>()
@@ -162,11 +167,12 @@ public extension Future {
   /**
     Add a fonction to fonction `fail` chain.
   
-    Parameter f: The fonction to execute
-  
-    Returns: self
-  
     Important: `f` is garanteed to be executed on main queue
+
+    - parameters:
+      - f is the fonction to execute
+
+    - returns: self
   */
   public func fail(f: NSError? -> Void) -> Future<A> {
     appendFail { error in f(error) }
@@ -226,12 +232,13 @@ public extension Future {
   /**
     Resolve a future
   
-    Parameter value: The value to resolve with
-
     Important: This fonction locks the future instance
     to do its work. This prevent inconsistent states
     that can pop when multiple threads access the
     same future instance
+
+    - parameters:
+      - value is the value the future will be resolve with
   */
   public func resolve(value: A) throws {
     // Avoid concurrent access, synchronise threads
@@ -265,12 +272,13 @@ public extension Future {
   /**
     Reject a future
   
-    Parameter error: The error to reject with (optional)
-  
     Important: This fonction locks the future instance
     to do its work. This prevent inconsistent states
     that can pop when multiple threads access the
     same future instance
+
+    - parameters:
+      - error is the error the future will be reject with (optional)
   */
   public func reject(error: NSError? = nil) throws {
     // Avoid concurrent access, synchronise threads
@@ -338,9 +346,10 @@ public extension Future {
   
     If one future fails, the future will be rejected with the same error
   
-    Parameter futures: an array of futures to resolve
+    - parameters:
+      - futures is an array of futures to resolve
   
-    Returns: future object
+    - returns: a future object
   */
   public static func all<A>(futures: [Future<A>]) -> Future<[A]> {
     return Future<[A]>.incoming { rootFuture in
